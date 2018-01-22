@@ -1,0 +1,19 @@
+# Author: Jet Anderson <jet@sourceclear.com>
+# github: https://github.com/srcclr/agent-docker-example
+# USAGE: Rename 'Dockerfile.example' to 'Dockerfile' before using
+
+FROM      ubuntu
+
+RUN       apt-get -y update && \
+          apt-get install -y curl python-pip && \
+          mkdir -p /home/app
+
+ADD      vulnerable  /home/app/
+
+WORKDIR   /home/app
+
+RUN       pip install --no-cache-dir -r /home/app/requirements.txt
+
+ENV       SRCCLR_API_TOKEN=paste_token_here
+
+RUN       curl -sSL https://download.sourceclear.com/ci.sh | CACHE_DIR=/tmp SCAN_DIR=/home/app bash
