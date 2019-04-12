@@ -1,52 +1,57 @@
-# Running SourceClear on Windows*
-#### \**(aka - Running SourceClear in a Docker container)*
 
-**Author:** Jet Anderson <jet@sourceclear.com>  
-**github:** https://github.com/srcclr/agent-docker-example  
+# Running SourceClear via Docker
 
+## Why?
 
-## Why do we need this?
+The SourceClear agent is [natively packaged](https://www.sourceclear.com/docs/command-line-interface/) for most platforms but isn't supported on some, e.g. the musl-based Alpine. This provides a way to run it on any platform with Docker support.
 
-Given that our primary focus is running SourceClear in DevSecOps pipelines, the SourceClear  agent currently doesn't run on Windows. However, that shouldn't stop you from running SourceClear scans on your Windows development desktops or Windows build servers. In fact, there are a lot of reasons why building your project in a container and running your tests therein makes even more sense than running it locally.
+## Getting started
 
-#### Container based builds:####
- - Create a repeatable process that anyone can duplicate. A **Dockerfile** works the same across all systems.
- - You can version your **Dockerfile**
- - Makes it portable to a new build system
+Build an image containing the agent:
 
-
-#### Planning your container build
-- In the **FROM** section choose an image with MINIMUM REQUIREMENTS to build your project. This is a best practice both for security and image size management.
-- Add only programs needed to build your app, add these as **RUN** sections. In our case we add ```pip``` and ```curl```.
-- Use **ADD** or **COPY** to make a copy of your app into the container for build and scanning. For our example we placed an app in a "vulnerable_app" folder at the container definition root and copied it into a /home/app directory.  
-- Install dependencies for your application
-- Set the **SRCCLR_API_TOKEN** variable *(we've used an ENV variable for ease, but you can optionally set this with docker-compose if you wish)*
-
-
-
-### How to use the example
-
-**NOTE:** Rename 'Dockerfile.example' to 'Dockerfile' before using.  
-\* *For more information on the SourceClear CI script see below link.*
-
-Use the following commands to run your container build:
-
-```
-# First build the image
-$ docker build . -t your_tag_name
-
-# Now run the built image
-$ docker run your_tag_name
+```sh
+docker build . -t srcclr/agent
 ```
 
+[Perform a scan](https://www.sourceclear.com/docs/agent-usage/):
 
+```sh
+export SRCCLR_API_TOKEN=token
+./srcclr scan --url https://github.com/srcclr/example-ruby --quick
+```
 
-##### Resources
-For SourceClear CI script usage see:
-- https://www.sourceclear.com/docs/ci-script-usage/
+This scans the given repository within a container and cleans everything up when done.
 
-Based on a similar project from:
-- https://github.com/embrasure/srcclr/
+## Building your projects
 
-For a simple vulnerable Python example app to scan use:
-- https://github.com/gdemarcsek/vulnerable
+For accurate results, the agent scans projects by building them and observing the dependencies resolved by their package managers. Full scans therefore require build-time dependencies, such as external programs and system libraries, to be present in the container.
+
+An easy way to accomplish this is to extend the image built earlier with a second Dockerfile:
+
+```Dockerfile
+FROM srcclr/agent
+RUN apt-get update -y && apt-get install -y maven
+```
+
+```sh
+docker build . -f Dockerfile-maven -t srcclr/agent-maven
+```
+
+With that done, full scans will work.
+
+```sh
+IMAGE=srcclr/agent-maven ./srcclr scan --url https://github.com/srcclr/example-java-maven
+```
+
+To speed up builds, it may be useful to mount system-wide cache directories. This may be done using `$DOCKER_ARGS`:
+
+```sh
+DOCKER_ARGS="-v $HOME/.m2:/root/.m2" IMAGE=srcclr/agent-maven \
+  ./srcclr scan --url https://github.com/srcclr/example-java-maven
+```
+
+The `srcclr` [script](/srcclr) predefines a few build `$TYPE`s to simplify this configuration, so all of the above may be done with:
+
+```sh
+TYPE=maven ./srcclr scan --url https://github.com/srcclr/example-java-maven
+```

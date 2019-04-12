@@ -1,0 +1,21 @@
+#!/bin/bash
+
+case $TYPE in
+  maven )
+    DOCKER_ARGS="-v $HOME/.m2:/root/.m2 $DOCKER_ARGS"
+    image=${IMAGE:-srcclr/agent-maven}
+    ;;
+  gradle )
+    DOCKER_ARGS="-v $HOME/.m2:/root/.m2 -v $HOME/.gradle:/root/.gradle $DOCKER_ARGS"
+    image=${IMAGE:-srcclr/agent-gradle}
+    ;;
+  sbt )
+    DOCKER_ARGS="-v $HOME/.m2:/root/.m2 -v $HOME/.ivy2:/root/.ivy2 -v $HOME/.sbt:/root/.sbt $DOCKER_ARGS"
+    image=${IMAGE:-srcclr/agent-sbt}
+    ;;
+  * )
+    image=${IMAGE:-srcclr/agent}
+    ;;
+esac
+
+docker run -it --rm "$DOCKER_ARGS" -v "$(pwd):/app" -w /app -e "SRCCLR_API_TOKEN=$SRCCLR_API_TOKEN" "$image" srcclr "$@"
