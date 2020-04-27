@@ -18,4 +18,6 @@ case $TYPE in
     ;;
 esac
 
-docker run -it --rm $DOCKER_ARGS -v "$(pwd):/app" -w /app -e "SRCCLR_API_TOKEN=$SRCCLR_API_TOKEN" "$image" srcclr "$@"
+docker run -it --rm $DOCKER_ARGS -w /app -v "$(pwd):/app" \
+  -v "$HOME/.srcclr:/root/.srcclr" \
+  -e "SRCCLR_API_TOKEN=$SRCCLR_API_TOKEN" "$image" srcclr "$@"
